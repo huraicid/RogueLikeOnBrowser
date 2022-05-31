@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="index.css" />
+    </head>
+<body>
+    <h1>TEST</h1>
+    <div id="statusBox">
+        <!-- ステータスボックスが入る-->
+    </div>
+    <div id="gameScreen">
+        <!-- ここにゲーム画面が入る -->
+    </div>
+    <div id="messageWindow">
+        <!-- メッセージ情報を入れる-->
+    </div>
+    <div id="debug">
+        <!-- debug情報を入れる-->
+    </div>
+
+    <script>
+        let player_x = 0;
+        let player_y = 0;
+        let treasure = false;
+
+        class Map {
+            /**
+             * マップデータ
+             * @type {Array<char>} 
+             */
+            data = null;
+            
+            max_height = 7;
+            max_width = 10;
+
+            /**
+             * 引数で与えた座標に対応するマップデータのindexを返します。
+             * @param {number} x x座標（整数値）
+             * @param {number} y y座標（整数値）
+             * @return その座標に対応するマップデータのindex
+             */
+            getIndex(x, y) {
+                return this.max_width * y + x;
+            }
+
+            /**
+             * 移動元から移動先までのindexの差分をキー入力から返します。
+             * @param {string} direction 方向（上下左右）
+             * @return {number} 移動元から移動先までのindexの差分
+             */
+            getMoveIndex(direction) {
+                switch(direction) {
+                    case 'ArrowUp':
+                        return -this.max_width;
+                    case 'ArrowDown':
+                        return this.max_width;
+                    case 'ArrowLeft':
+                        return -1;
+                    case 'ArrowRight':
+                        return 1;
+                    default:
+                        console.log("something is wrong. The key is " + direction + ".");
+                        return 0;
+                }
+            }
+        }
+
+        window.onload = () => {
+            let map = new Map();
+            map.data = Array.from(
+                "0000000000"
+               +"01111g1110"
+               +"0000101110"
+               +"0111101110"
+               +"0110001110"
+               +"01111p1110"
+               +"0000000000"
+
+            );
+
+            let statusBox = document.getElementById("statusBox");
+            let gameScreen = document.getElementById("gameScreen");
+            let messageWindow = document.getElementById("messageWindow");
+            let debug = document.getElementById("debug");
+
+            statusBox.innerHTML = "_1F Lv.1 HP 15/ 15";
+            messageWindow.innerHTML = "The beginning of a new adventure!";
+
+            updateGameScreen(map.data)
+
+
+            /**
+             * キー入力のイベントハンドラです。
+             * @param {string} キー入力
+             */
+            document.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case 'a':
+                        if(treasure) {
+                            // プレイヤーと同じ座標にtreasureがあった場合のイベント
+                            messageWindow.innerHTML = "You got the treasure!!"
+                            return;
+                        }
+                    case 'ArrowUp':
+                    case 'ArrowDown':
+                    case 'ArrowLeft':
+                    case 'ArrowRight':
+                        let nextIndex = getNextIndex(map, e.key);
+                        if(checkInnerMap(map, nextIndex) && checkMovable(map.data[nextIndex])) {
+                            map.data = updateMapData(map, nextIndex);
+                            updateGameScreen(map.data);
+                        }
+                        
+                        if(!treasure) {
+                            messageWindow.innerHTML = "Direction: " + e.key;
+                        }
+                        else {
+                            messageWindow.innerHTML = "There is something on the road.";
+                        }
+                }
+
+                
+            })
+
+            /**
+             * 次に進む予定の座標に対応するマップデータのindexを取得します。
+             * @param {Map} map マップオブジェクト
+             * @param {string} direction 次に進む方向
+             * @return {number} 次に進む予定の座標に対応するマップデータのindex
+             */
+            function getNextIndex(map, direction) {
+                return map.getIndex(player_x, player_y) + map.getMoveIndex(direction);
+            }
+
+            function checkInnerMap(map, nextIndex) { 
+                if(!(0 <= nextIndex && nextIndex < map.max_height * map.max_width)) {
+                    return false;
+                }
+
+                return true;
+            }
+
+            function checkMovable(mapchip) {
+                if(mapchip == '1' || mapchip == 'g') {
+                    return true;
+                }
+
+                return false;
+            }
+
+            function updateMapData(map, nextIndex) {
+                let tmpNextMapchip = map.data[nextIndex];
+                map.data[nextIndex] = 'p';
+
+                if(treasure) {
+                    map.data[map.getIndex(player_x, player_y)] = 'g';
+                    treasure = false;
+                }
+                else {
+                    map.data[map.getIndex(player_x, player_y)] = '1';
+                }
+
+                if(tmpNextMapchip == 'g') {
+                    treasure = true;
+                }
+                
+                return map.data;
+            }
+
+            /**
+             * 画面表示を更新します。
+             * @param {string} displayMapData
+             */
+            function updateGameScreen(displayMapData) {
+                gameScreen.innerHTML = getDisplayData(displayMapData);
+            }
+
+            /**
+             * マップデータを画面表示用のデータに変換します。
+             * @param {Array<char>} mapData マップデータ
+             * @return {string} 画面表示用のデータ
+             */
+            function getDisplayData(mapData) {
+                let rtn = "";
+                for(let i = 0; i < mapData.length; i++) {
+                    if(i != 0 && i % 10 == 0) {
+                        rtn += "\n";
+                    }
+
+                    switch(mapData[i]) {
+                        case '0':
+                            rtn += "■";
+                            break;
+                        case '1':
+                            rtn += "．";
+                            break;
+                        case 'p':
+                            rtn += "＠";
+                            player_x = i % 10;
+                            player_y = Math.floor(i / 10);
+                            break;
+                        case 'g':
+                            rtn += "￥";
+                            break;
+                        default:
+                            rtn += mapData[i];
+                    }
+                }
+
+                return rtn;
+            }
+        }
+        
+    </script>
+
+</body>
+</html>
