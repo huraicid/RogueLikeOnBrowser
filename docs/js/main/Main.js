@@ -2,6 +2,8 @@ let player_x = 0;
 let player_y = 0;
 let treasure = false;
 
+let keyInsertable = true;
+
 window.onload = () => {
     // TODO: テスト用データなのでmap生成機能ができたら削除する
     let map = new Map();
@@ -33,32 +35,35 @@ window.onload = () => {
      * @param {string} キー入力
      */
     document.addEventListener('keydown', (e) => {
-        switch(e.key) {
-        case 'a':
-            if(treasure) {
-                // プレイヤーと同じ座標にtreasureがあった場合のイベント
-                messageWindow.innerHTML = "You got the treasure!!"
-                return;
+        if(keyInsertable) {
+            switch(e.key) {
+            case 'a':
+                if(treasure) {
+                    // プレイヤーと同じ座標にtreasureがあった場合のイベント
+                    messageWindow.innerHTML = "You got the treasure!!";
+                    keyInsertable = false;
+                    return;
+                }
+            case 'ArrowUp':
+            case 'ArrowDown':
+            case 'ArrowLeft':
+            case 'ArrowRight':
+                let nextIndex = getNextIndex(map, e.key);
+                if(checkInnerMap(map, nextIndex) && checkMovable(map.data[nextIndex])) {
+                    // 移動可能な場合の処理
+                    map.data = updateMapData(map, nextIndex);
+                    updateGameScreen(map.data);
+                }
+                
+                if(treasure) {
+                    // 足元にお宝がある場合
+                    messageWindow.innerHTML = "There is something on the road.";
+                }
+                else {
+                    messageWindow.innerHTML = "Direction: " + e.key;
+                }
             }
-        case 'ArrowUp':
-        case 'ArrowDown':
-        case 'ArrowLeft':
-        case 'ArrowRight':
-            let nextIndex = getNextIndex(map, e.key);
-            if(checkInnerMap(map, nextIndex) && checkMovable(map.data[nextIndex])) {
-                // 移動可能な場合の処理
-                map.data = updateMapData(map, nextIndex);
-                updateGameScreen(map.data);
-            }
-            
-            if(treasure) {
-                // 足元にお宝がある場合
-                messageWindow.innerHTML = "There is something on the road.";
-            }
-            else {
-                messageWindow.innerHTML = "Direction: " + e.key;
-            }
-        }
+        }       
     });
 
     /**
